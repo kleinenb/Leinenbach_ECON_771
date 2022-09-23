@@ -47,11 +47,14 @@ data$adoption_year[data$Expansion.Status == "Adopted but Not Implemented"] <- ""
 #Question 1
 #Summary Statistics for Uncompensated Care
 library(psych)
-uncom_stat <- describe.by(data$uncomp_care, data$year, mat=TRUE)
+uncom_stat <- describeBy(data$uncomp_care, data$year, mat=TRUE)
 names(uncom_stat)[names(uncom_stat) == "group1"] <- "Year" #change column name
 rownames(uncom_stat) <- uncom_stat$Year
 uncom_stat <- uncom_stat[,c("mean","sd","min","max")]
 colnames(uncom_stat) <- c("Mean", "Standard Deviation", "Minimum", "Maximum")
+
+setwd("/Users/katieleinenbach/Desktop")
+write.csv(as.data.frame(uncom_stat), file =  "question_1_1.csv")
 
 #Summary Statistics for Total Revenue
 rev_stat <- describe.by(data$tot_pat_rev, data$year, mat=TRUE)
@@ -59,10 +62,20 @@ names(rev_stat)[names(rev_stat) == "group1"] <- "Year" #change column name
 rownames(rev_stat) <- rev_stat$Year
 rev_stat <- rev_stat[,c("mean","sd","min","max")]
 colnames(rev_stat) <- c("Mean", "Standard Deviation", "Minimum", "Maximum")
+write.csv(as.data.frame(rev_stat), file =  "question_1_2.csv")
 
 #Question 2
+data$type <- ifelse(data$nonprofit == 1, "Non-profit", "For profit")
 
+graph <- data%>%                                     
+  group_by(type, year) %>%
+  dplyr::summarise(uncom_care = mean(uncomp_care, na.rm = TRUE))
+library(ggplot2)
 
+ggplot(graph, aes(x=year, y=uncom_care, group=type)) +
+  geom_line(aes(linetype=type))+
+  geom_point()+
+  scale_linetype_manual(values=c("twodash", "dotted"))
 
 #Question 3
 library(fixest)
@@ -74,6 +87,7 @@ twfe_2016 <- feols(uncomp_care ~ treat | state + year, data = data[data$adoption
 
 twfe_table <- etable(twfe_tot, twfe_2014, twfe_2015, twfe_2016, order = "f", drop = "Int")
 colnames(twfe_table) <- c("Full Sample", "2014 Treatment", "2015 Treatment", "2016 Treatment")
+write.csv(as.data.frame(twfe_table), file =  "question_3.csv")
 
 
 #Question 4
@@ -85,6 +99,7 @@ question_4_table <- etable(twfe_tot4, twfe_2014_4, order = "f", drop = "Int")
 colnames(question_4_table) <- c("Full Sample", "2014 Treatment")
 names(question_4_table)[names(question_4_table) == "treat_interaction-1"] <- "Year -1"
 
+write.csv(as.data.frame(question_4_table), file =  "question_4.csv")
 
 #Question 5
 sun_ab_2014 <- feols(uncomp_care ~ sunab(adoption_year, year) | state + year,
@@ -98,13 +113,14 @@ sun_ab_2016 <- feols(uncomp_care ~ sunab(adoption_year, year) | state + year,
                      data=data[data$adoption_year == 2016 | data$adoption_year == "",])
 question_5_table <- etable(sun_ab_2014, sun_ab_2015, sun_ab_2016, order = "f", drop = "Int")
 colnames(question_5_table) <- c("2014 Treatment", "2015 Treatment", "2016 Treatment")
+write.csv(as.data.frame(question_5_table), file =  "question_5.csv")
 
 
 #Question 6
 
-iplot(sun_ab_2014, xlab = "Time to Treatment", main = "SA Event Study")
-iplot(sun_ab_2015, xlab = "Time to Treatment", main = "SA Event Study")
-iplot(sun_ab_2016, xlab = "Time to Treatment", main = "SA Event Study")
+iplot(sun_ab_2014, xlab = "Time to Treatment", main = "2014 SA Event Study")
+iplot(sun_ab_2015, xlab = "Time to Treatment", main = "2015 SA Event Study")
+iplot(sun_ab_2016, xlab = "Time to Treatment", main = "2016 SA Event Study")
 
 
 
@@ -119,7 +135,7 @@ mod.cs <- att_gt(yname="uncomp_care", tname="year", idname="provider_number",
                  data=data, panel=TRUE, est_method="dr",
                  allow_unbalanced_panel=TRUE)
 mod.cs.event <- aggte(mod.cs, type="dynamic")
-ggdid(mod.cs.event, legend = FALSE)
+ggdid(mod.cs.event, legend = FALSE, cex.axis = 3)
 
 #Question 8
 install.packages("remotes")
